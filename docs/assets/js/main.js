@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
   setupImageZoom();
   highlightCodeBlocks();
   setupMobileNavigation();
+  setupScrollToTop();
+  setupTables();
 });
 
 /**
@@ -402,5 +404,111 @@ function highlightCodeBlocks() {
     } else {
       parentPre.setAttribute('data-language', 'code');
     }
+  });
+}
+
+/**
+ * Scroll to Top functionality
+ */
+function setupScrollToTop() {
+  // Create scroll to top button if it doesn't exist
+  if (!document.querySelector('.scroll-top')) {
+    const scrollTopButton = document.createElement('button');
+    scrollTopButton.classList.add('scroll-top');
+    scrollTopButton.setAttribute('aria-label', 'Scroll to top');
+    scrollTopButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
+    document.body.appendChild(scrollTopButton);
+  }
+
+  const scrollTopButton = document.querySelector('.scroll-top');
+  if (!scrollTopButton) return;
+
+  // Show/hide button based on scroll position
+  window.addEventListener('scroll', function() {
+    if (window.pageYOffset > 500) {
+      scrollTopButton.classList.add('visible');
+    } else {
+      scrollTopButton.classList.remove('visible');
+    }
+  });
+
+  // Smooth scroll to top when clicked
+  scrollTopButton.addEventListener('click', function() {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+}
+
+/**
+ * Enhanced table functionality
+ */
+function setupTables() {
+  const tables = document.querySelectorAll('table');
+  
+  tables.forEach(table => {
+    // Add responsive wrapper if not already present
+    if (!table.parentElement.classList.contains('table-responsive')) {
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('table-responsive');
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    }
+    
+    // Add sort functionality to table headers
+    const headers = table.querySelectorAll('th');
+    headers.forEach((header, index) => {
+      if (!header.hasAttribute('data-sortable')) {
+        header.setAttribute('data-sortable', 'true');
+        header.style.cursor = 'pointer';
+        
+        // Add sort icon
+        const sortIcon = document.createElement('span');
+        sortIcon.classList.add('sort-icon');
+        sortIcon.innerHTML = ' ↕️';
+        header.appendChild(sortIcon);
+        
+        // Add click handler for sorting
+        header.addEventListener('click', () => {
+          const isAscending = header.getAttribute('data-sort') === 'asc';
+          const sortOrder = isAscending ? 'desc' : 'asc';
+          
+          // Reset all headers
+          headers.forEach(h => {
+            h.removeAttribute('data-sort');
+            h.querySelector('.sort-icon').innerHTML = ' ↕️';
+          });
+          
+          // Update current header
+          header.setAttribute('data-sort', sortOrder);
+          header.querySelector('.sort-icon').innerHTML = isAscending ? ' ↓' : ' ↑';
+          
+          // Sort the table
+          const tbody = table.querySelector('tbody');
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+          
+          rows.sort((a, b) => {
+            const aValue = a.cells[index].textContent.trim();
+            const bValue = b.cells[index].textContent.trim();
+            
+            // Check if values are numbers
+            const aNum = parseFloat(aValue);
+            const bNum = parseFloat(bValue);
+            
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+              return isAscending ? bNum - aNum : aNum - bNum;
+            }
+            
+            return isAscending 
+              ? bValue.localeCompare(aValue) 
+              : aValue.localeCompare(bValue);
+          });
+          
+          // Reorder rows
+          rows.forEach(row => tbody.appendChild(row));
+        });
+      }
+    });
   });
 } 

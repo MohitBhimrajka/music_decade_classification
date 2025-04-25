@@ -624,33 +624,61 @@ code {
 // Tables
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: $spacing-6 0;
   font-size: $text-sm;
+  border: 1px solid var(--color-border);
   border-radius: $border-radius-md;
   overflow: hidden;
-  box-shadow: $shadow-sm;
+  
+  @media (max-width: $breakpoint-md) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   
   th, td {
     padding: $spacing-3 $spacing-4;
     text-align: left;
     border-bottom: 1px solid var(--color-border);
+    
+    &:not(:last-child) {
+      border-right: 1px solid var(--color-border);
+    }
   }
   
   th {
-    background-color: $grey-100;
+    background-color: var(--color-background);
     font-weight: $font-semibold;
     text-transform: uppercase;
     font-size: $text-xs;
     letter-spacing: 0.05em;
+    color: var(--color-text);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    
+    &:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      border-bottom: 1px solid var(--color-border);
+    }
   }
   
-  tr:hover {
-    background-color: $grey-50;
-  }
-  
-  tbody tr:last-child td {
-    border-bottom: none;
+  tbody {
+    tr {
+      &:hover {
+        background-color: rgba(var(--color-primary-rgb), 0.05);
+      }
+      
+      &:last-child td {
+        border-bottom: none;
+      }
+    }
   }
 }
 
@@ -820,5 +848,189 @@ footer {
   svg {
     width: 20px;
     height: 20px;
+  }
+}
+
+// Card Components
+.card {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: $border-radius-lg;
+  padding: $spacing-6;
+  margin: $spacing-4 0;
+  transition: all $transition-normal ease-in-out;
+  box-shadow: $shadow-sm;
+  
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+  
+  &.finding-card {
+    @include flex(column, flex-start, stretch);
+    gap: $spacing-4;
+    
+    .card-header {
+      @include flex(row, flex-start, center);
+      gap: $spacing-3;
+      
+      .icon {
+        width: 32px;
+        height: 32px;
+        color: var(--color-primary);
+      }
+      
+      h4 {
+        font-family: $font-family-heading;
+        font-size: $text-xl;
+        font-weight: $font-semibold;
+        margin: 0;
+        color: var(--color-text);
+      }
+    }
+    
+    .card-content {
+      color: var(--color-text-light);
+      font-size: $text-base;
+      line-height: $leading-relaxed;
+    }
+    
+    .card-footer {
+      margin-top: $spacing-2;
+      padding-top: $spacing-2;
+      border-top: 1px solid var(--color-border);
+      font-size: $text-sm;
+      color: var(--color-text-light);
+    }
+  }
+  
+  &.stat-card {
+    text-align: center;
+    
+    .stat-value {
+      font-family: $font-family-heading;
+      font-size: $text-4xl;
+      font-weight: $font-bold;
+      color: var(--color-primary);
+      margin-bottom: $spacing-2;
+    }
+    
+    .stat-label {
+      font-size: $text-sm;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-light);
+    }
+    
+    .stat-description {
+      margin-top: $spacing-3;
+      font-size: $text-sm;
+      color: var(--color-text-light);
+    }
+  }
+}
+
+// Scroll to Top Button
+.scroll-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background-color: var(--color-primary);
+  color: var(--color-background);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+  }
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Enhanced Table Styles */
+.table-responsive {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: var(--color-background);
+
+    th {
+      position: sticky;
+      top: 0;
+      background-color: var(--color-primary);
+      color: var(--color-background);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+
+      &[data-sortable="true"] {
+        cursor: pointer;
+
+        &:hover {
+          background-color: var(--color-primary-dark);
+        }
+      }
+
+      .sort-icon {
+        margin-left: 0.5rem;
+        font-size: 0.8em;
+        opacity: 0.7;
+      }
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--color-border);
+      transition: background-color 0.2s ease;
+    }
+
+    tbody tr {
+      &:hover {
+        background-color: var(--hover-color);
+      }
+
+      &:last-child td {
+        border-bottom: none;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    margin: 1rem -1rem;
+    border-radius: 0;
+    box-shadow: none;
+
+    table {
+      th, td {
+        padding: 0.75rem;
+      }
+    }
   }
 } 

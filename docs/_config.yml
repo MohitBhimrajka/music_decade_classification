@@ -1,8 +1,13 @@
 theme: jekyll-theme-cayman
-title: "Music Decade Classification: A Deep Learning Journey"
-description: "Building and optimizing a neural network for music decade prediction with interactive visualizations and insights"
-author: "Mohit Bhimrajka"
+title: "Music Decade Classification"
+description: "A systematic approach to building and optimizing a Deep Neural Network for music decade classification using the Million Song Dataset."
+author: "Your Name"
 logo: "/assets/images/logo.png"  # Will create this in implementation phase
+
+# GitHub Pages specific settings
+baseurl: "/music_decade_classification" # the subpath of your site, e.g. /blog
+url: "https://mohitbhimrajka.github.io" # the base hostname & protocol
+repository: "MohitBhimrajka/music_decade_classification"
 
 # Enhanced GitHub integration
 github:
@@ -10,7 +15,7 @@ github:
   repository_url: https://github.com/MohitBhimrajka/music_decade_classification
   repository_name: music_decade_classification
 
-# Content settings
+# Build settings
 markdown: kramdown
 kramdown:
   input: GFM
@@ -27,25 +32,27 @@ kramdown:
 navigation:
   - title: Introduction
     url: "#introduction"
-  - title: Data Analysis
+  - title: Data
     url: "#data"
-  - title: Exploratory Analysis
+  - title: EDA
     url: "#eda"
-  - title: Baseline Model
+  - title: Baseline
     url: "#baseline"
   - title: Optimization
     url: "#optimization"
-  - title: Final Results
+  - title: Results
     url: "#results"
 
-# Enable additional features
+# Enable GitHub Pages plugins
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
+  - jekyll-github-metadata
 
 # Additional settings
 permalink: pretty
 sass:
+  sass_dir: assets/styles/scss
   style: compressed
 
 # Custom variables for our enhanced styling
@@ -65,3 +72,11 @@ custom_settings:
 #     values:
 #       layout: "default"
 # include: ["assets/css/style.css"] # May not be needed if theme auto-includes
+
+# Build settings
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
