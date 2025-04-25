@@ -1,4 +1,4 @@
-theme: jekyll-theme-cayman
+# Removed theme: jekyll-theme-cayman as requested
 title: "Music Decade Classification"
 description: "A systematic approach to building and optimizing a Deep Neural Network for music decade classification using the Million Song Dataset."
 author: "Your Name"

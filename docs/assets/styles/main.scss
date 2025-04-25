@@ -1,1 +1,6 @@
-@import "scss/main"; 
+---
+---
+
+@import "_variables";
+@import "_mixins";
+@import "main";
