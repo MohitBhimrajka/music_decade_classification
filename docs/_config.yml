@@ -1,10 +1,20 @@
-theme: jekyll-theme-minimal # Or choose another like jekyll-theme-cayman, jekyll-theme-primer
+theme: jekyll-theme-minimal
 title: "Music Decade Classification: An Optimized DNN Journey"
 description: "Building and optimizing a deep neural network for music year prediction using the Million Song Dataset."
 github:
   is_project_page: true
-  repository_url: https://github.com/MohitBhimrajka/music_decade_classification # Update with your URL
-markdown: kramdown # Standard markdown processor
+  repository_url: https://github.com/MohitBhimrajka/music_decade_classification
+markdown: kramdown
 kramdown:
-  input: GFM # Enable GitHub Flavored Markdown features
-  syntax_highlighter: rouge # For code highlighting
+  input: GFM
+  syntax_highlighter: rouge
+
+# Optional: Explicitly include CSS (May depend on theme's handling)
+# Defaults might be needed if theme doesn't automatically include assets/css/style.css
+# defaults:
+#   -
+#     scope:
+#       path: "" # an empty string here means all files in the project
+#     values:
+#       layout: "default"
+# include: ["assets/css/style.css"] # May not be needed if theme auto-includes
