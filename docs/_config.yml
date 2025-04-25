@@ -51,9 +51,6 @@ plugins:
 
 # Additional settings
 permalink: pretty
-sass:
-  sass_dir: assets/styles/scss
-  style: compressed
 
 # Custom variables for our enhanced styling
 custom_settings:
@@ -80,3 +77,4 @@ exclude:
   - node_modules
   - vendor
   - README.md
+  - .github
