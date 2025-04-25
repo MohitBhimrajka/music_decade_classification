@@ -1,0 +1,10 @@
+theme: jekyll-theme-minimal # Or choose another like jekyll-theme-cayman, jekyll-theme-primer
+title: "Music Decade Classification: An Optimized DNN Journey"
+description: "Building and optimizing a deep neural network for music year prediction using the Million Song Dataset."
+github:
+  is_project_page: true
+  repository_url: https://github.com/MohitBhimrajka/music_decade_classification # Update with your URL
+markdown: kramdown # Standard markdown processor
+kramdown:
+  input: GFM # Enable GitHub Flavored Markdown features
+  syntax_highlighter: rouge # For code highlighting
