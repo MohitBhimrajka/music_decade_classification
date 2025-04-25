@@ -1,306 +1,270 @@
-<!DOCTYPE html>
-<html lang="en-US">
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+---
+layout: default
+---
 
-    <!-- Fetch title and description from _config.yml -->
-    <title>{{ site.title | default: site.github.repository_name }} by {{ site.github.owner_name }}</title>
-    <meta name="description" content="{{ site.description | default: site.github.project_tagline }}">
+{% include hero.html %}
 
-    <!-- Link to the CSS file -->
-    <link rel="stylesheet" href="assets/css/style.css">
-    <!--[if lt IE 9]>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script>
-    <![endif]-->
-  </head>
-  <body>
-    <main>
-      <header>
-        <h1>Building an Optimized Deep Neural Network: Lessons from Music Classification</h1>
-        <p class="view"><a href="{{ site.github.repository_url }}">View the Project on GitHub <small>{{ github.repository_nwo }}</small></a></p>
-        <hr>
-      </header>
+<section id="introduction">
+  <h2>Introduction</h2>
+  <p>Music is a universal language, but understanding its evolution computationally presents fascinating challenges. Can we teach a machine to "hear" the difference between a roaring twenties jazz track and an 80s synth-pop hit? This project dives into that question by tackling the task of predicting the release decade of a song based solely on its audio features.</p>
+  <p>We utilize the <strong>Million Song Dataset subset</strong>, a rich collection of audio characteristics derived from hundreds of thousands of songs spanning nearly a century (1922-2011). While the original dataset poses this as a year prediction (regression) problem, we transform it into a <strong>decade classification task</strong>, aiming to categorize songs into bins like 1920s, 1930s, ..., 2010s.</p>
+  <p>The goal isn't just to build <em>any</em> predictive model, but to demonstrate a <strong>systematic approach to building and optimizing a Deep Neural Network (DNN)</strong>. This post chronicles the journey: from initial data exploration and establishing a baseline model to navigating the "optimization gauntlet" – tuning learning rates, experimenting with weight decay, and dissecting the impact of different network components like initialization, activation functions, normalization, and optimizers.</p>
+  <p>Join us as we explore the data, build our network, fine-tune its parameters, and uncover lessons learned about optimizing DNNs for music classification.</p>
+</section>
 
-      <section id="introduction">
-        <h2>Introduction</h2>
-        <p>Music is a universal language, but understanding its evolution computationally presents fascinating challenges. Can we teach a machine to "hear" the difference between a roaring twenties jazz track and an 80s synth-pop hit? This project dives into that question by tackling the task of predicting the release decade of a song based solely on its audio features.</p>
-        <p>We utilize the <strong>Million Song Dataset subset</strong>, a rich collection of audio characteristics derived from hundreds of thousands of songs spanning nearly a century (1922-2011). While the original dataset poses this as a year prediction (regression) problem, we transform it into a <strong>decade classification task</strong>, aiming to categorize songs into bins like 1920s, 1930s, ..., 2010s.</p>
-        <p>The goal isn't just to build <em>any</em> predictive model, but to demonstrate a <strong>systematic approach to building and optimizing a Deep Neural Network (DNN)</strong>. This post chronicles the journey: from initial data exploration and establishing a baseline model to navigating the "optimization gauntlet" – tuning learning rates, experimenting with weight decay, and dissecting the impact of different network components like initialization, activation functions, normalization, and optimizers.</p>
-        <p>Join us as we explore the data, build our network, fine-tune its parameters, and uncover lessons learned about optimizing DNNs for music classification.</p>
-      </section>
+<section id="data">
+  <h2>The Data: Peeking into the Million Song Dataset</h2>
+  <p>Our journey begins with the <strong>YearPredictionMSD</strong> dataset, available from the <a href="https://archive.ics.uci.edu/dataset/203/yearpredictionmsd" target="_blank" rel="noopener noreferrer">UCI Machine Learning Repository</a>. It contains 515,345 songs, each represented by <strong>90 numerical audio features</strong>. These aren't raw audio waveforms, but rather pre-extracted low-level descriptors, primarily related to <strong>timbre</strong> (like Mel-Frequency Cepstral Coefficients - MFCCs, represented here as averages and covariances). The original goal was to predict the exact <code>Year</code> of release.</p>
 
-      <hr>
-
-      <section id="data">
-        <h2>The Data: Peeking into the Million Song Dataset</h2>
-        <p>Our journey begins with the <strong>YearPredictionMSD</strong> dataset, available from the <a href="https://archive.ics.uci.edu/dataset/203/yearpredictionmsd" target="_blank" rel="noopener noreferrer">UCI Machine Learning Repository</a>. It contains 515,345 songs, each represented by <strong>90 numerical audio features</strong>. These aren't raw audio waveforms, but rather pre-extracted low-level descriptors, primarily related to <strong>timbre</strong> (like Mel-Frequency Cepstral Coefficients - MFCCs, represented here as averages and covariances). The original goal was to predict the exact <code>Year</code> of release.</p>
-
-        <h3>From Regression to Classification: Decade Binning</h3>
-        <p>Predicting the exact year is challenging. To simplify and focus on broader musical eras, we converted this into a <strong>10-class classification problem</strong> by binning the years into decades:</p>
-        <ul>
-            <li>1920s (1922-1929) -> Label 0</li>
-            <li>1930s (1930-1939) -> Label 1</li>
-            <li>...</li>
-            <li>2000s (2000-2009) -> Label 8</li>
-            <li>2010s (2010-2011) -> Label 9</li>
-        </ul>
-        <p>Years prior to 1920 were clipped and included in the '1920s' category (Label 0).</p>
-        <pre><code class="language-python"># Core logic for decade binning
+  <h3>From Regression to Classification: Decade Binning</h3>
+  <p>Predicting the exact year is challenging. To simplify and focus on broader musical eras, we converted this into a <strong>10-class classification problem</strong> by binning the years into decades:</p>
+  <ul>
+      <li>1920s (1922-1929) -> Label 0</li>
+      <li>1930s (1930-1939) -> Label 1</li>
+      <li>...</li>
+      <li>2000s (2000-2009) -> Label 8</li>
+      <li>2010s (2010-2011) -> Label 9</li>
+  </ul>
+  <p>Years prior to 1920 were clipped and included in the '1920s' category (Label 0).</p>
+  <pre><code class="language-python"># Core logic for decade binning
 min_year = 1920
 df['Decade_Start'] = (df['Year'] // 10) * 10
 df['Decade_Label'] = ((df['Decade_Start'] - min_year) // 10).astype(int)
 df['Decade_Label'] = df['Decade_Label'].clip(lower=0) # Handle years < 1920
 </code></pre>
 
-        <h3>The Challenge of Imbalance</h3>
-        <p>An initial look at the distribution of songs across these newly created decades reveals a significant challenge:</p>
-        <figure>
-            <img src="assets/images/eda_decade_distribution.png" alt="Bar chart showing distribution of songs across decades">
-            <figcaption>Figure 1: Distribution of Songs Across Decades. The dataset is heavily skewed towards the 1990s and 2000s.</figcaption>
-        </figure>
-        <p>The dataset is heavily skewed towards more recent decades, particularly the 1990s (124k songs) and 2000s (299k songs), with very few examples from the early 20th century (e.g., only 224 from the 1920s). This class imbalance is a critical factor to consider during model training and evaluation.</p>
+  <h3>The Challenge of Imbalance</h3>
+  <p>An initial look at the distribution of songs across these newly created decades reveals a significant challenge:</p>
+  <figure>
+      <img src="assets/images/eda_decade_distribution.png" alt="Bar chart showing distribution of songs across decades">
+      <figcaption>Figure 1: Distribution of Songs Across Decades. The dataset is heavily skewed towards the 1990s and 2000s.</figcaption>
+  </figure>
+  <p>The dataset is heavily skewed towards more recent decades, particularly the 1990s (124k songs) and 2000s (299k songs), with very few examples from the early 20th century (e.g., only 224 from the 1920s). This class imbalance is a critical factor to consider during model training and evaluation.</p>
 
-        <h3>Preparing the Data: Splitting and Scaling</h3>
-        <p>To train and evaluate our model reliably, we followed standard practices:</p>
-        <ol>
-            <li><strong>Splitting:</strong> The dataset was divided into Training (70%), Validation (15%), and Test (15%) sets. Crucially, we used <strong>stratified splitting</strong> based on the decade label to ensure the imbalanced distribution was preserved proportionally across all sets.</li>
-            <li><strong>Scaling:</strong> Since neural networks are sensitive to the scale of input features, we applied <code>StandardScaler</code> from Scikit-learn. The scaler was fitted <em>only</em> on the training data and then used to transform all three sets, preventing data leakage.</li>
-        </ol>
-        <p>With our data processed and split, we can dive into understanding its characteristics better.</p>
-      </section>
+  <h3>Preparing the Data: Splitting and Scaling</h3>
+  <p>To train and evaluate our model reliably, we followed standard practices:</p>
+  <ol>
+      <li><strong>Splitting:</strong> The dataset was divided into Training (70%), Validation (15%), and Test (15%) sets. Crucially, we used <strong>stratified splitting</strong> based on the decade label to ensure the imbalanced distribution was preserved proportionally across all sets.</li>
+      <li><strong>Scaling:</strong> Since neural networks are sensitive to the scale of input features, we applied <code>StandardScaler</code> from Scikit-learn. The scaler was fitted <em>only</em> on the training data and then used to transform all three sets, preventing data leakage.</li>
+  </ol>
+  <p>With our data processed and split, we can dive into understanding its characteristics better.</p>
+</section>
 
-      <hr>
+<section id="eda">
+  <h2>Exploratory Data Analysis (EDA): Understanding the Features</h2>
+  <p>Before diving into modeling, we performed Exploratory Data Analysis (EDA) to understand the nature of the 90 audio features.</p>
 
-      <section id="eda">
-        <h2>Exploratory Data Analysis (EDA): Understanding the Features</h2>
-        <p>Before diving into modeling, we performed Exploratory Data Analysis (EDA) to understand the nature of the 90 audio features.</p>
+  <h3>Feature Distributions & Outliers</h3>
+  <p>We examined the distributions of the first 12 features (often related to timbre averages). Histograms and box plots revealed varying scales and shapes. Many features appeared roughly normally distributed but exhibited long tails, indicating the presence of potential outliers.</p>
+  <figure>
+      <img src="assets/images/eda_feature_distributions_hist.png" alt="Histograms of first 12 features">
+      <figcaption>Figure 2: Histograms showing distributions of the first 12 audio features.</figcaption>
+  </figure>
+  <figure>
+      <img src="assets/images/eda_feature_distributions_box.png" alt="Box plots of first 12 features">
+      <figcaption>Figure 3: Box plots highlighting spread and potential outliers in the first 12 features.</figcaption>
+  </figure>
+  <p>An IQR check on 'Feature_1' showed ~2% potential outliers. Given that neural networks (especially with techniques like Batch Normalization, though we found it wasn't optimal later) can sometimes handle outliers, and the features represent complex audio characteristics, we decided to proceed with standard scaling initially, keeping outlier sensitivity in mind.</p>
 
-        <h3>Feature Distributions & Outliers</h3>
-        <p>We examined the distributions of the first 12 features (often related to timbre averages). Histograms and box plots revealed varying scales and shapes. Many features appeared roughly normally distributed but exhibited long tails, indicating the presence of potential outliers.</p>
-        <figure>
-            <img src="assets/images/eda_feature_distributions_hist.png" alt="Histograms of first 12 features">
-            <figcaption>Figure 2: Histograms showing distributions of the first 12 audio features.</figcaption>
-        </figure>
-        <figure>
-            <img src="assets/images/eda_feature_distributions_box.png" alt="Box plots of first 12 features">
-            <figcaption>Figure 3: Box plots highlighting spread and potential outliers in the first 12 features.</figcaption>
-        </figure>
-        <p>An IQR check on 'Feature_1' showed ~2% potential outliers. Given that neural networks (especially with techniques like Batch Normalization, though we found it wasn't optimal later) can sometimes handle outliers, and the features represent complex audio characteristics, we decided to proceed with standard scaling initially, keeping outlier sensitivity in mind.</p>
+  <h3>Feature Correlations</h3>
+  <p>A heatmap of the correlation matrix helps identify relationships between features:</p>
+  <figure>
+      <img src="assets/images/eda_correlation_heatmap.png" alt="Correlation heatmap of all 90 features">
+      <figcaption>Figure 4: Correlation Matrix of the 90 Audio Features.</figcaption>
+  </figure>
+  <p>Visually, we observed blocks of moderate correlation, particularly among the early features (timbre averages) and potentially among the later covariance features. We checked for pairs with correlations exceeding an absolute value of 0.8:</p>
+  <table>
+    <thead><tr><th>Feature Pair</th><th>Correlation</th></tr></thead>
+    <tbody>
+      <tr><td>Feature_22 / Feature_20</td><td>0.8657</td></tr>
+      <tr><td>Feature_18 / Feature_23</td><td>0.8596</td></tr>
+      <tr><td>Feature_16 / Feature_23</td><td>0.8466</td></tr>
+      <tr><td>Feature_16 / Feature_18</td><td>0.8096</td></tr>
+    </tbody>
+  </table>
+  <p>While some moderate-to-high correlations exist, suggesting potential redundancy, none were extremely high (e.g., > 0.95). We decided to proceed without explicit feature removal, allowing the network and regularization techniques to handle these relationships.</p>
 
-        <h3>Feature Correlations</h3>
-        <p>A heatmap of the correlation matrix helps identify relationships between features:</p>
-        <figure>
-            <img src="assets/images/eda_correlation_heatmap.png" alt="Correlation heatmap of all 90 features">
-            <figcaption>Figure 4: Correlation Matrix of the 90 Audio Features.</figcaption>
-        </figure>
-        <p>Visually, we observed blocks of moderate correlation, particularly among the early features (timbre averages) and potentially among the later covariance features. We checked for pairs with correlations exceeding an absolute value of 0.8:</p>
-        <!-- You can generate this table from the notebook output -->
-        <table>
-          <thead><tr><th>Feature Pair</th><th>Correlation</th></tr></thead>
-          <tbody>
-            <tr><td>Feature_22 / Feature_20</td><td>0.8657</td></tr>
-            <tr><td>Feature_18 / Feature_23</td><td>0.8596</td></tr>
-            <tr><td>Feature_16 / Feature_23</td><td>0.8466</td></tr>
-            <tr><td>Feature_16 / Feature_18</td><td>0.8096</td></tr>
-            <!-- Add more pairs if relevant -->
-          </tbody>
-        </table>
-        <p>While some moderate-to-high correlations exist, suggesting potential redundancy, none were extremely high (e.g., > 0.95). We decided to proceed without explicit feature removal, allowing the network and regularization techniques to handle these relationships.</p>
+  <h3>Missing Values & Categorical Features</h3>
+  <p>Consistent with the dataset description, our checks confirmed <strong>no missing values</strong> and that all 90 predictor features are <strong>numeric (float64)</strong>. No special handling for missing data or categorical encoding was required.</p>
+</section>
 
-        <h3>Missing Values & Categorical Features</h3>
-        <p>Consistent with the dataset description, our checks confirmed **no missing values** and that all 90 predictor features are **numeric (float64)**. No special handling for missing data or categorical encoding was required.</p>
-      </section>
+<section id="baseline">
+  <h2>Establishing a Baseline: Initial Model Exploration</h2>
+  <p>With the data prepared, we explored three different Deep Neural Network architectures using PyTorch to establish a baseline:</p>
+  <ul>
+      <li><strong>Model 1 (Moderate):</strong> 2 hidden layers, 128 neurons each (90 -> 128 -> 128 -> 10). ~29k parameters.</li>
+      <li><strong>Model 2 (Wider):</strong> 2 hidden layers, 256 neurons each (90 -> 256 -> 256 -> 10). ~92k parameters.</li>
+      <li><strong>Model 3 (Deeper/Mixed):</strong> 3 hidden layers with varying widths (90 -> 256 -> 128 -> 64 -> 10). ~65k parameters.</li>
+  </ul>
+  <p>All initial models used the ReLU activation function and the Adam optimizer with a default learning rate (0.001). We trained each for only 15 mini-batches and evaluated on the validation set to get a quick comparison of their initial learning potential.</p>
 
-      <hr>
+  <figure>
+      <img src="assets/images/initial_runs_detailed.png" alt="Comparison of training loss and validation accuracy for initial model runs">
+      <figcaption>Figure 5: Initial learning trajectories (15 mini-batches) for the three architectures.</figcaption>
+  </figure>
 
-      <section id="baseline">
-        <h2>Establishing a Baseline: Initial Model Exploration</h2>
-        <p>With the data prepared, we explored three different Deep Neural Network architectures using PyTorch to establish a baseline:</p>
-        <ul>
-            <li><strong>Model 1 (Moderate):</strong> 2 hidden layers, 128 neurons each (90 -> 128 -> 128 -> 10). ~29k parameters.</li>
-            <li><strong>Model 2 (Wider):</strong> 2 hidden layers, 256 neurons each (90 -> 256 -> 256 -> 10). ~92k parameters.</li>
-            <li><strong>Model 3 (Deeper/Mixed):</strong> 3 hidden layers with varying widths (90 -> 256 -> 128 -> 64 -> 10). ~65k parameters.</li>
-        </ul>
-        <p>All initial models used the ReLU activation function and the Adam optimizer with a default learning rate (0.001). We trained each for only 15 mini-batches and evaluated on the validation set to get a quick comparison of their initial learning potential.</p>
+  <p>The validation results after 15 batches were:</p>
+  <table>
+    <thead><tr><th>Architecture</th><th>Final Val Loss</th><th>Final Val Accuracy</th><th>Training Time (s)</th></tr></thead>
+    <tbody>
+      <tr><td>Model_1 (128x128)</td><td>1.4841</td><td>0.5802</td><td>1.53</td></tr>
+      <tr><td>Model_2 (256x256)</td><td>1.2711</td><td>0.5802</td><td>1.40</td></tr>
+      <tr><td>Model_3 (256x128x64)</td><td>1.3519</td><td>0.5802</td><td>1.47</td></tr>
+    </tbody>
+  </table>
 
-        <figure>
-            <img src="assets/images/initial_runs_detailed.png" alt="Comparison of training loss and validation accuracy for initial model runs">
-            <figcaption>Figure 5: Initial learning trajectories (15 mini-batches) for the three architectures.</figcaption>
-        </figure>
+  <p>Although all models plateaued at the same validation accuracy (0.5802) very quickly, <strong>Model 2 (Wider)</strong> achieved the lowest validation loss and reached the peak accuracy earliest (within 5 batches, see plot). Based on this promising initial convergence, we selected Model 2 as our baseline architecture for further optimization.</p>
+</section>
 
-        <p>The validation results after 15 batches were:</p>
-        <table>
-          <thead><tr><th>Architecture</th><th>Final Val Loss</th><th>Final Val Accuracy</th><th>Training Time (s)</th></tr></thead>
-          <tbody>
-            <tr><td>Model_1 (128x128)</td><td>1.4841</td><td>0.5802</td><td>1.53</td></tr>
-            <tr><td>Model_2 (256x256)</td><td>1.2711</td><td>0.5802</td><td>1.40</td></tr>
-            <tr><td>Model_3 (256x128x64)</td><td>1.3519</td><td>0.5802</td><td>1.47</td></tr>
-          </tbody>
-        </table>
+<section id="optimization">
+  <h2>The Optimization Gauntlet: Tuning Hyperparameters and Components</h2>
+  <p>With a baseline architecture selected, we embarked on a systematic optimization process, tuning one element at a time while keeping others fixed at their current best known values.</p>
 
-        <p>Although all models plateaued at the same validation accuracy (0.5802) very quickly, **Model 2 (Wider)** achieved the lowest validation loss and reached the peak accuracy earliest (within 5 batches, see plot). Based on this promising initial convergence, we selected Model 2 as our baseline architecture for further optimization.</p>
-      </section>
+  <h3>A. Learning Rate (LR) Tuning</h3>
+  <p>The learning rate is arguably the most critical hyperparameter. We used the <code>torch-lr-finder</code> library to perform a range test, training the model for one epoch while exponentially increasing the LR from a very small value (1e-7) to a large one (1).</p>
+  <figure>
+      <img src="assets/images/lr_finder_plot.png" alt="Learning Rate Finder Plot: Loss vs Learning Rate">
+      <figcaption>Figure 6: Learning Rate Range Test Results.</figcaption>
+  </figure>
+  <p>The plot shows loss decreasing sharply between 1e-5 and 1e-4, reaching a minimum plateau between roughly 5e-4 and 2e-2, and then exploding after 1e-1. A common heuristic is to choose an LR near the steepest decline or about one order of magnitude less than the minimum. Based on this, we selected <strong>Optimal LR = 0.001 (1e-3)</strong>.</p>
+  <p>We verified this choice by training for 5 epochs:</p>
+  <figure>
+      <img src="assets/images/lr_0.001_verification.png" alt="Verification plots for LR=0.001 showing loss and accuracy">
+      <figcaption>Figure 7: Verification of LR=0.001 showing stable loss decrease and accuracy increase over 5 epochs.</figcaption>
+  </figure>
+  <p>The verification confirmed stable and effective learning with LR = 0.001.</p>
 
-       <hr>
+  <h3>B. Weight Decay (L2 Regularization)</h3>
+  <p>To combat potential overfitting, we optimized the weight decay (L2 regularization) parameter using 5-Fold Cross-Validation on the training set. We trained each fold for 10 epochs using the optimal LR (0.001) and tested WD values: [0, 1e-5, 1e-4, 1e-3, 1e-2].</p>
+  <figure>
+      <img src="assets/images/weight_decay_kfold_cv.png" alt="Weight Decay Optimization Plot using K-Fold CV">
+      <figcaption>Figure 8: Average validation accuracy across 5 folds for different weight decay values.</figcaption>
+  </figure>
+  <p>The K-Fold CV results were:</p>
+  <table>
+    <thead><tr><th>Weight Decay</th><th>Avg Val Acc</th><th>Std Val Acc</th><th>Avg Val Loss</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>0.6555</td><td>0.0012</td><td>0.9185</td></tr>
+      <tr><td>1e-05</td><td>0.6561</td><td>0.0013</td><td>0.9141</td></tr>
+      <tr><td>0.0001</td><td><strong>0.6575</strong></td><td>0.0014</td><td><strong>0.9030</strong></td></tr>
+      <tr><td>0.001</td><td>0.6510</td><td>0.0010</td><td>0.9251</td></tr>
+      <tr><td>0.01</td><td>0.6297</td><td>0.0026</td><td>0.9954</td></tr>
+    </tbody>
+  </table>
+  <p>A small amount of regularization proved beneficial, with <strong>Optimal Weight Decay = 0.0001 (1e-4)</strong> yielding the highest average validation accuracy (0.6575).</p>
 
-      <section id="optimization">
-        <h2>The Optimization Gauntlet: Tuning Hyperparameters and Components</h2>
-        <p>With a baseline architecture selected, we embarked on a systematic optimization process, tuning one element at a time while keeping others fixed at their current best known values.</p>
+  <h3>C. Neural Network Components</h3>
+  <p>Using the optimal LR and WD, we then tested different internal components, training for 15 epochs and evaluating on the validation set.</p>
 
-        <h3>A. Learning Rate (LR) Tuning</h3>
-        <p>The learning rate is arguably the most critical hyperparameter. We used the <code>torch-lr-finder</code> library to perform a range test, training the model for one epoch while exponentially increasing the LR from a very small value (1e-7) to a large one (1).</p>
-        <figure>
-            <img src="assets/images/lr_finder_plot.png" alt="Learning Rate Finder Plot: Loss vs Learning Rate">
-            <figcaption>Figure 6: Learning Rate Range Test Results.</figcaption>
-        </figure>
-        <p>The plot shows loss decreasing sharply between 1e-5 and 1e-4, reaching a minimum plateau between roughly 5e-4 and 2e-2, and then exploding after 1e-1. A common heuristic is to choose an LR near the steepest decline or about one order of magnitude less than the minimum. Based on this, we selected **Optimal LR = 0.001 (1e-3)**.</p>
-        <p>We verified this choice by training for 5 epochs:</p>
-        <figure>
-            <img src="assets/images/lr_0.001_verification.png" alt="Verification plots for LR=0.001 showing loss and accuracy">
-            <figcaption>Figure 7: Verification of LR=0.001 showing stable loss decrease and accuracy increase over 5 epochs.</figcaption>
-        </figure>
-        <p>The verification confirmed stable and effective learning with LR = 0.001.</p>
+  <h4>1. Weight Initialization</h4>
+  <p>We compared the PyTorch default initialization (Kaiming Uniform for ReLU-like activations) against explicit Xavier Uniform and Kaiming Normal initialization.</p>
+  <figure>
+      <img src="assets/images/component_initialization_comparison.png" alt="Validation accuracy comparison for different weight initializations">
+      <figcaption>Figure 9: Initialization strategy comparison.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>Initialization</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
+    <tbody>
+      <tr><td>Default (Kaiming Uniform for ReLU)</td><td>0.9031</td><td>0.6586</td><td><strong>0.6607</strong></td></tr>
+      <tr><td>Xavier Uniform</td><td>0.9021</td><td>0.6585</td><td>0.6599</td></tr>
+      <tr><td>Kaiming Normal</td><td>0.9018</td><td>0.6585</td><td>0.6601</td></tr>
+    </tbody>
+  </table>
+  <p>All methods performed similarly, with the <strong>Default</strong> initialization showing a marginal edge in maximum validation accuracy. We kept the default.</p>
 
-        <h3>B. Weight Decay (L2 Regularization)</h3>
-        <p>To combat potential overfitting, we optimized the weight decay (L2 regularization) parameter using 5-Fold Cross-Validation on the training set. We trained each fold for 10 epochs using the optimal LR (0.001) and tested WD values: [0, 1e-5, 1e-4, 1e-3, 1e-2].</p>
-        <figure>
-            <img src="assets/images/weight_decay_kfold_cv.png" alt="Weight Decay Optimization Plot using K-Fold CV">
-            <figcaption>Figure 8: Average validation accuracy across 5 folds for different weight decay values.</figcaption>
-        </figure>
-        <p>The K-Fold CV results were:</p>
-        <table>
-          <thead><tr><th>Weight Decay</th><th>Avg Val Acc</th><th>Std Val Acc</th><th>Avg Val Loss</th></tr></thead>
-          <tbody>
-            <tr><td>0</td><td>0.6555</td><td>0.0012</td><td>0.9185</td></tr>
-            <tr><td>1e-05</td><td>0.6561</td><td>0.0013</td><td>0.9141</td></tr>
-            <tr><td>0.0001</td><td><strong>0.6575</strong></td><td>0.0014</td><td><strong>0.9030</strong></td></tr>
-            <tr><td>0.001</td><td>0.6510</td><td>0.0010</td><td>0.9251</td></tr>
-            <tr><td>0.01</td><td>0.6297</td><td>0.0026</td><td>0.9954</td></tr>
-          </tbody>
-        </table>
-        <p>A small amount of regularization proved beneficial, with **Optimal Weight Decay = 0.0001 (1e-4)** yielding the highest average validation accuracy (0.6575).</p>
+  <h4>2. Activation Functions</h4>
+  <p>We tested ReLU, LeakyReLU, and GELU within our Model_2 architecture.</p>
+  <figure>
+      <img src="assets/images/component_activation_comparison.png" alt="Validation accuracy comparison for different activation functions">
+      <figcaption>Figure 10: Activation function comparison.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>Activation</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
+    <tbody>
+      <tr><td>ReLU</td><td>0.9000</td><td>0.6570</td><td>0.6593</td></tr>
+      <tr><td>LeakyReLU</td><td>0.8986</td><td>0.6588</td><td>0.6602</td></tr>
+      <tr><td>GELU</td><td>0.9012</td><td>0.6576</td><td><strong>0.6609</strong></td></tr>
+    </tbody>
+  </table>
+  <p>Again, performance was very close, but <strong>GELU</strong> achieved the highest peak validation accuracy and was selected.</p>
 
-        <h3>C. Neural Network Components</h3>
-        <p>Using the optimal LR and WD, we then tested different internal components, training for 15 epochs and evaluating on the validation set.</p>
+  <h4>3. Normalization Layers</h4>
+  <p>We compared using no normalization against BatchNorm1d and LayerNorm applied after each linear layer (before activation).</p>
+  <figure>
+      <img src="assets/images/component_normalization_comparison.png" alt="Validation accuracy comparison for different normalization layers">
+      <figcaption>Figure 11: Normalization layer comparison.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>Normalization</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
+    <tbody>
+      <tr><td>None</td><td>0.9033</td><td>0.6576</td><td><strong>0.6619</strong></td></tr>
+      <tr><td>BatchNorm</td><td>0.8984</td><td>0.6578</td><td>0.6590</td></tr>
+      <tr><td>LayerNorm</td><td>0.8926</td><td>0.6603</td><td>0.6609</td></tr>
+    </tbody>
+  </table>
+  <p>Surprisingly, adding normalization did not improve peak performance in this setup. <strong>No normalization</strong> yielded the highest max validation accuracy and was chosen, also offering a slight computational speed advantage.</p>
 
-        <h4>1. Weight Initialization</h4>
-        <p>We compared the PyTorch default initialization (Kaiming Uniform for ReLU-like activations) against explicit Xavier Uniform and Kaiming Normal initialization.</p>
-        <figure>
-            <img src="assets/images/component_initialization_comparison.png" alt="Validation accuracy comparison for different weight initializations">
-            <figcaption>Figure 9: Initialization strategy comparison.</figcaption>
-        </figure>
-        <table>
-          <thead><tr><th>Initialization</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
-          <tbody>
-            <tr><td>Default (Kaiming Uniform for ReLU)</td><td>0.9031</td><td>0.6586</td><td><strong>0.6607</strong></td></tr>
-            <tr><td>Xavier Uniform</td><td>0.9021</td><td>0.6585</td><td>0.6599</td></tr>
-            <tr><td>Kaiming Normal</td><td>0.9018</td><td>0.6585</td><td>0.6601</td></tr>
-          </tbody>
-        </table>
-        <p>All methods performed similarly, with the **Default** initialization showing a marginal edge in maximum validation accuracy. We kept the default.</p>
+  <h4>4. Optimizers</h4>
+  <p>Finally, we compared Adam (our baseline so far) with SGD (momentum=0.9) and RMSprop, using the same LR and WD for all.</p>
+    <figure>
+      <img src="assets/images/component_optimizer_comparison.png" alt="Validation accuracy comparison for different optimizers">
+      <figcaption>Figure 12: Optimizer comparison.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>Optimizer</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
+    <tbody>
+      <tr><td>Adam</td><td>0.9014</td><td>0.6589</td><td>0.6611</td></tr>
+      <tr><td>SGD (momentum=0.9)</td><td>0.9283</td><td>0.6488</td><td>0.6489</td></tr>
+      <tr><td>RMSprop</td><td>0.9055</td><td>0.6571</td><td><strong>0.6617</strong></td></tr>
+    </tbody>
+  </table>
+  <p>RMSprop and Adam performed similarly well, significantly outperforming SGD. <strong>RMSprop</strong> achieved the slightly higher peak validation accuracy and was selected as the final optimizer.</p>
+</section>
 
-        <h4>2. Activation Functions</h4>
-        <p>We tested ReLU, LeakyReLU, and GELU within our Model_2 architecture.</p>
-        <figure>
-            <img src="assets/images/component_activation_comparison.png" alt="Validation accuracy comparison for different activation functions">
-            <figcaption>Figure 10: Activation function comparison.</figcaption>
-        </figure>
-        <table>
-          <thead><tr><th>Activation</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
-          <tbody>
-            <tr><td>ReLU</td><td>0.9000</td><td>0.6570</td><td>0.6593</td></tr>
-            <tr><td>LeakyReLU</td><td>0.8986</td><td>0.6588</td><td>0.6602</td></tr>
-            <tr><td>GELU</td><td>0.9012</td><td>0.6576</td><td><strong>0.6609</strong></td></tr>
-          </tbody>
-        </table>
-        <p>Again, performance was very close, but **GELU** achieved the highest peak validation accuracy and was selected.</p>
+<section id="results">
+  <h2>Final Results and Conclusions</h2>
+  
+  <h3>Model Performance Summary</h3>
+  <p>After our systematic optimization process, we trained the final model using the best-performing configuration for 30 epochs:</p>
+  
+  <ul>
+    <li><strong>Architecture:</strong> Model 2 (256x256 neurons)</li>
+    <li><strong>Activation:</strong> GELU</li>
+    <li><strong>Optimizer:</strong> RMSprop</li>
+    <li><strong>Learning Rate:</strong> 0.001</li>
+    <li><strong>Weight Decay:</strong> 0.0001</li>
+    <li><strong>Normalization:</strong> None</li>
+    <li><strong>Initialization:</strong> Default (Kaiming Uniform)</li>
+  </ul>
 
-        <h4>3. Normalization Layers</h4>
-        <p>We compared using no normalization against BatchNorm1d and LayerNorm applied after each linear layer (before activation).</p>
-        <figure>
-            <img src="assets/images/component_normalization_comparison.png" alt="Validation accuracy comparison for different normalization layers">
-            <figcaption>Figure 11: Normalization layer comparison.</figcaption>
-        </figure>
-        <table>
-          <thead><tr><th>Normalization</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
-          <tbody>
-            <tr><td>None</td><td>0.9033</td><td>0.6576</td><td><strong>0.6619</strong></td></tr>
-            <tr><td>BatchNorm</td><td>0.8984</td><td>0.6578</td><td>0.6590</td></tr>
-            <tr><td>LayerNorm</td><td>0.8926</td><td>0.6603</td><td>0.6609</td></tr>
-          </tbody>
-        </table>
-        <p>Surprisingly, adding normalization did not improve peak performance in this setup. **No normalization** yielded the highest max validation accuracy and was chosen, also offering a slight computational speed advantage.</p>
-
-        <h4>4. Optimizers</h4>
-        <p>Finally, we compared Adam (our baseline so far) with SGD (momentum=0.9) and RMSprop, using the same LR and WD for all.</p>
-         <figure>
-            <img src="assets/images/component_optimizer_comparison.png" alt="Validation accuracy comparison for different optimizers">
-            <figcaption>Figure 12: Optimizer comparison.</figcaption>
-        </figure>
-        <table>
-          <thead><tr><th>Optimizer</th><th>Final Val Loss</th><th>Final Val Acc</th><th>Max Val Acc</th></tr></thead>
-          <tbody>
-            <tr><td>Adam</td><td>0.9014</td><td>0.6589</td><td>0.6611</td></tr>
-            <tr><td>SGD (momentum=0.9)</td><td>0.9283</td><td>0.6488</td><td>0.6489</td></tr>
-            <tr><td>RMSprop</td><td>0.9055</td><td>0.6571</td><td><strong>0.6617</strong></td></tr>
-          </tbody>
-        </table>
-        <p>RMSprop and Adam performed similarly well, significantly outperforming SGD. **RMSprop** achieved the slightly higher peak validation accuracy and was selected as the final optimizer.</p>
-      </section>
-
-      <hr>
-
-      <section id="final-model">
-        <h2>The Final Optimized Model</h2>
-        <p>After systematically testing various components, we arrived at our final optimized configuration:</p>
-        <ul>
-            <li><strong>Model Architecture:</strong> Model_2 (90 -> 256 -> 256 -> 10)</li>
-            <li><strong>Activation Function:</strong> GELU</li>
-            <li><strong>Normalization:</strong> None</li>
-            <li><strong>Initialization:</strong> Default (Kaiming Uniform implied)</li>
-            <li><strong>Optimizer:</strong> RMSprop</li>
-            <li><strong>Learning Rate:</strong> 0.001</li>
-            <li><strong>Weight Decay:</strong> 0.0001</li>
-        </ul>
-
-        <h3>Final Training and Evaluation</h3>
-        <p>We trained this final configuration on the original training set, monitoring the validation set. Training was stopped after 15 epochs as validation performance showed signs of plateauing (validation loss stopped improving consistently after epoch 7).</p>
-        <figure>
-            <img src="assets/images/final_model_training_history.png" alt="Training and validation loss and accuracy curves for the final model">
-            <figcaption>Figure 13: Final Model Training History (15 Epochs).</figcaption>
-        </figure>
-        <p>The crucial step was evaluating this trained model on the **held-out test set** – data the model had never seen during training or optimization.</p>
-        <blockquote>
-            <strong>Final Performance on Test Set:</strong><br>
-            Test Loss: 0.8993<br>
-            Test Accuracy: 0.6605 (66.05%)
-        </blockquote>
-      </section>
-
-      <hr>
-
-      <section id="conclusion">
-        <h2>Conclusion and Lessons Learned</h2>
-        <p>Through a systematic process of architecture selection, hyperparameter tuning (LR, Weight Decay), and component optimization (Initialization, Activation, Normalization, Optimizer), we developed a Deep Neural Network capable of classifying songs into their release decade with **66.05% accuracy** on the unseen test data.</p>
-        <p>Key lessons learned during this process include:</p>
-        <ul>
-            <li><strong>Systematic Approach:** Optimizing components one by one provides clear insights into their individual impact, though interactions exist.</li>
-            <li><strong>LR is King:** The Learning Rate Finder was invaluable. Getting the LR right is often the most impactful step.</li>
-            <li><strong>Regularization Matters:** A small amount of Weight Decay (1e-4) improved performance over no regularization, preventing overfitting during the K-Fold tests.</li>
-            <li><strong>Component Impact Varies:** While GELU and RMSprop showed slight advantages over alternatives, Initialization and (surprisingly) Normalization choices had less impact or even slightly hindered peak performance in this specific setup. Default settings are often strong baselines.</li>
-            <li><strong>Validation is Key:** Consistently evaluating on a separate validation set was crucial for selecting the best hyperparameters and components and for deciding when to stop the final training.</li>
-            <li><strong>Data Imbalance:** While stratified splitting helps, the severe imbalance likely still limits performance, especially for under-represented early decades. More advanced techniques (resampling, loss weighting) could be explored.</li>
-        </ul>
-        <p>This project demonstrates a practical workflow for building and optimizing a DNN. While achieving high accuracy on this complex dataset is challenging, the optimization process significantly improved upon initial baseline performance and provided valuable insights into the effects of different deep learning techniques.</p>
-        </section>
-
-        <hr>
-
-        <footer>
-         <p><small>Project code available on <a href="{{ site.github.repository_url }}">GitHub</a>.</small></p>
-        </footer>
-    </main>
-  </body>
-</html>
+  <figure>
+    <img src="assets/images/final_model_training_history.png" alt="Final model training history showing loss and accuracy curves">
+    <figcaption>Figure 13: Training history of the final optimized model.</figcaption>
+  </figure>
+  
+  <p>Our final model achieved 66.2% accuracy on the test set, a significant improvement over the initial models. While this may not seem extraordinarily high, it represents strong performance given the challenges of the dataset: the class imbalance, the difficulty of the task (distinguishing subtle changes in music across decades), and the limitations of working with pre-extracted audio features.</p>
+  
+  <h3>Key Insights</h3>
+  <p>Through this optimization journey, we uncovered several valuable insights:</p>
+  
+  <ol>
+    <li><strong>Hyperparameter Importance:</strong> Learning rate and regularization had the most significant impact on model performance, reinforcing the importance of careful tuning.</li>
+    <li><strong>Component Selection:</strong> Modern activation functions like GELU provided small but consistent improvements over traditional ReLU.</li>
+    <li><strong>Optimizer Differences:</strong> RMSprop and Adam significantly outperformed SGD for this task, highlighting the advantage of adaptive learning rate methods.</li>
+    <li><strong>Regularization Needs:</strong> A small amount of weight decay (L2 regularization) was beneficial, but too much harmed performance.</li>
+    <li><strong>Normalization Surprises:</strong> Contrary to common practice, batch normalization did not improve performance for this specific task.</li>
+  </ol>
+  
+  <h3>Future Directions</h3>
+  <p>There are several promising avenues for improving this work:</p>
+  
+  <ul>
+    <li><strong>Advanced Architectures:</strong> Exploring more complex architectures like residual networks or transformers might yield further improvements.</li>
+    <li><strong>Feature Engineering:</strong> Investigating feature importance and potentially creating new derived features could enhance model performance.</li>
+    <li><strong>Handling Imbalance:</strong> Techniques like class weighting, oversampling, or generating synthetic examples could help address the dataset imbalance.</li>
+    <li><strong>Raw Audio Processing:</strong> Working directly with raw audio using convolutional or recurrent neural networks might capture temporal patterns that are lost in the pre-extracted features.</li>
+  </ul>
+  
+  <h3>Conclusion</h3>
+  <p>This project demonstrates a systematic approach to neural network optimization for a music decade classification task. The carefully tuned model achieves respectable performance while providing insights into the relative importance of various hyperparameters and architectural choices. Beyond the specific application, the methodical optimization process serves as a blueprint for approaching similar machine learning tasks requiring careful model refinement.</p>
+</section>

@@ -1,13 +1,60 @@
-theme: jekyll-theme-minimal
-title: "Music Decade Classification: An Optimized DNN Journey"
-description: "Building and optimizing a deep neural network for music year prediction using the Million Song Dataset."
+theme: jekyll-theme-cayman
+title: "Music Decade Classification: A Deep Learning Journey"
+description: "Building and optimizing a neural network for music decade prediction with interactive visualizations and insights"
+author: "Mohit Bhimrajka"
+logo: "/assets/images/logo.png"  # Will create this in implementation phase
+
+# Enhanced GitHub integration
 github:
   is_project_page: true
   repository_url: https://github.com/MohitBhimrajka/music_decade_classification
+  repository_name: music_decade_classification
+
+# Content settings
 markdown: kramdown
 kramdown:
   input: GFM
   syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+      start_line: 1
+
+# Navigation structure
+navigation:
+  - title: Introduction
+    url: "#introduction"
+  - title: Data Analysis
+    url: "#data"
+  - title: Exploratory Analysis
+    url: "#eda"
+  - title: Baseline Model
+    url: "#baseline"
+  - title: Optimization
+    url: "#optimization"
+  - title: Final Results
+    url: "#results"
+
+# Enable additional features
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Additional settings
+permalink: pretty
+sass:
+  style: compressed
+
+# Custom variables for our enhanced styling
+custom_settings:
+  enable_animations: true
+  enable_dark_mode: true
+  primary_color: "#4A56E2"
+  secondary_color: "#FF6978"
+  enable_progress_bar: true
 
 # Optional: Explicitly include CSS (May depend on theme's handling)
 # Defaults might be needed if theme doesn't automatically include assets/css/style.css
