@@ -5,7 +5,7 @@
 This project details the process of building and systematically optimizing a Deep Neural Network (DNN) to classify songs into their release decades (1920s-2010s) based on audio features from the Million Song Dataset subset.
 
 **Read the full journey and detailed findings in our blog post:**
-➡️ **[Building an Optimized Deep Neural Network: Lessons from Music Classification](https://mohitbhimrajka.github.io/music_decade_classification/)** ⬅️
+➡️ **[Building an Optimized Deep Neural Network: Lessons from Music Classification]([https://mohitbhimrajka.github.io/music_decade_classification/](https://mohitbhimrajka.com/blog/music_decade_classification))** ⬅️
 
 ## Project Overview
 
